@@ -69,6 +69,22 @@ flutter:
   #   - images/a_dot_ham.jpeg
   assets:
       - assets/audios/
+
+  fonts:
+    - family: DS-DIGI
+      fonts:
+        - asset: assets/fonts/DS-DIGI.TTF
+          weight: 400
+        - asset: assets/fonts/DS-DIGIB.TTF
+          weight: 700
+        - asset: assets/fonts/DS-DIGII.TTF
+          style: italic
+          weight: 400
+        - asset: assets/fonts/DS-DIGIT.TTF
+          style: italic
+          weight: 700
+          
+
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
 

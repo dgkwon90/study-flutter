@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:simple_timer/timer_clock_lcd.dart';
+
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:digital_lcd_number/digital_lcd_number.dart';
+
 import 'package:flutter/services.dart';
 
 void main() {
@@ -23,35 +25,6 @@ class TimerApp extends StatelessWidget {
       home: const TimerPage(
         title: 'Simple Timer',
       ),
-    );
-  }
-}
-
-class TimerClock extends StatelessWidget {
-  final int number;
-  const TimerClock(this.number, {super.key})
-      : assert(number >= 0 && number <= 99);
-
-  @override
-  Widget build(BuildContext context) {
-    int num2 = (number / 10).floor();
-    int num1 = number % 10;
-    debugPrint('10의 자리 $num2');
-    debugPrint('1의 자리 $num1');
-
-    return Row(
-      children: [
-        DigitalLcdNumber(
-          number: num2,
-          color: Colors.black,
-          disabledColor: Colors.grey.shade300,
-        ),
-        DigitalLcdNumber(
-          number: num1,
-          color: Colors.black,
-          disabledColor: Colors.grey.shade300,
-        ),
-      ],
     );
   }
 }
@@ -187,6 +160,13 @@ class _TimerPageState extends State<TimerPage> {
   }
 
   @override
+  void dispose() {
+    _subscription.cancel();
+    _player.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -197,19 +177,27 @@ class _TimerPageState extends State<TimerPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            SizedBox(
-              height: 100,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TimerClock(_minute),
-                  Text(
-                    ':',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  TimerClock(_second),
-                ],
-              ),
+            // timer_clock_lcd
+            // SizedBox(
+            //   height: 100,
+            //   child: Row(
+            //     mainAxisSize: MainAxisSize.min,
+            //     children: [
+            //       TimerClock(_minute),
+            //       Text(
+            //         ':',
+            //         style: Theme.of(context).textTheme.headlineMedium,
+            //       ),
+            //       TimerClock(_second),
+            //     ],
+            //   ),
+            // ),
+            Text(
+              '${_minute.toString().padLeft(2, '0')} : ${_second.toString().padLeft(2, '0')}',
+              style: const TextStyle(
+                  fontFamily: "DS-DIGI",
+                  fontWeight: FontWeight.w400,
+                  fontSize: 100),
             ),
             const SizedBox(height: 10),
             SizedBox(
