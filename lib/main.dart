@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:digital_lcd_number/digital_lcd_number.dart';
+import 'package:flutter/services.dart';
 
 void main() {
   runApp(const TimerApp());
@@ -72,6 +74,9 @@ class TimerPage extends StatefulWidget {
 class _TimerPageState extends State<TimerPage> {
   late StreamSubscription<int> _subscription;
   late AudioPlayer _player;
+  bool _isRunning = false;
+  int _setMinute = 1;
+  int _setSecond = 0;
   int _minute = 1;
   int _second = 0;
 
@@ -81,8 +86,8 @@ class _TimerPageState extends State<TimerPage> {
       _subscription.cancel();
       _audioStop();
       setState(() {
-        _minute = minute;
-        _second = second;
+        _minute = _setMinute;
+        _second = _setSecond;
       });
     }
 
@@ -91,6 +96,7 @@ class _TimerPageState extends State<TimerPage> {
 
     if (timerSecond == currentSecond) {
       debugPrint("timer start!!!");
+      _isRunning = true;
       _subscription = const Ticker().tick(ticks: timerSecond).listen((value) {
         setState(() {
           if (_second == 0) {
@@ -112,17 +118,22 @@ class _TimerPageState extends State<TimerPage> {
   }
 
   void _stopTimer() {
-    debugPrint("timer stop!!!");
-    _subscription.cancel();
-    _audioStop();
-    setState(() {
-      _minute = 1;
-      _second = 0;
-    });
+    if (_isRunning) {
+      debugPrint("timer stop!!!");
+      _subscription.cancel();
+      _audioStop();
+      setState(() {
+        _minute = _setMinute;
+        _second = _setSecond;
+      });
+      _isRunning = false;
+    } else {
+      debugPrint("ignore stop!!!");
+    }
   }
 
   void _pauseTimer() {
-    if (!_subscription.isPaused) {
+    if (_isRunning && !_subscription.isPaused) {
       _subscription.pause();
       debugPrint("timer pause!!!");
     } else {
@@ -131,7 +142,7 @@ class _TimerPageState extends State<TimerPage> {
   }
 
   void _resumeTimer() {
-    if (_subscription.isPaused) {
+    if (_isRunning && _subscription.isPaused) {
       _subscription.resume();
       debugPrint("timer resume!!!");
     } else {
@@ -140,15 +151,19 @@ class _TimerPageState extends State<TimerPage> {
   }
 
   void _resetTimer() {
-    debugPrint("timer reset!!!");
-    _subscription.cancel();
-    _audioStop();
-    setState(() {
-      _minute = 1;
-      _second = 0;
-    });
+    if (_isRunning) {
+      debugPrint("timer reset!!!");
+      _subscription.cancel();
+      _audioStop();
+      setState(() {
+        _minute = _setMinute;
+        _second = _setSecond;
+      });
 
-    _startTimer(1, 0);
+      _startTimer(_setMinute, _setSecond);
+    } else {
+      debugPrint("ignore reset!!!");
+    }
   }
 
   Future _audioPlay() async {
@@ -197,6 +212,55 @@ class _TimerPageState extends State<TimerPage> {
               ),
             ),
             const SizedBox(height: 10),
+            SizedBox(
+              width: 200,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Flexible(
+                    child: TextField(
+                      decoration: const InputDecoration(
+                          border: OutlineInputBorder(), labelText: "Minute"),
+                      style: Theme.of(context).textTheme.bodySmall,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        DecimalTextInputFormatter(decimalRange: 2)
+                      ],
+                      onChanged: (text) {
+                        _setMinute = int.parse(text);
+                        if (!_isRunning) {
+                          setState(() {
+                            _minute = _setMinute;
+                          });
+                        }
+                        debugPrint("set minute: $_setMinute");
+                      },
+                    ),
+                  ),
+                  Flexible(
+                    child: TextField(
+                      decoration: const InputDecoration(
+                          border: OutlineInputBorder(), labelText: "Second"),
+                      style: Theme.of(context).textTheme.bodySmall,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: <TextInputFormatter>[
+                        FilteringTextInputFormatter.digitsOnly
+                      ],
+                      onChanged: (text) {
+                        _setSecond = int.parse(text);
+                        if (!_isRunning) {
+                          setState(() {
+                            _second = _setSecond;
+                          });
+                        }
+                        debugPrint("set second: $_setSecond");
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const Text(
               'default timer is 1 minutes.',
             ),
@@ -206,7 +270,7 @@ class _TimerPageState extends State<TimerPage> {
               children: [
                 ElevatedButton.icon(
                   onPressed: () {
-                    _startTimer(1, 0);
+                    _startTimer(_setMinute, _setSecond);
                   },
                   icon: const Icon(Icons.play_arrow),
                   label: const Text('Start'),
@@ -240,6 +304,43 @@ class _TimerPageState extends State<TimerPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class DecimalTextInputFormatter extends TextInputFormatter {
+  DecimalTextInputFormatter({required this.decimalRange})
+      : assert(decimalRange > 0);
+
+  final int decimalRange;
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue, // unused.
+    TextEditingValue newValue,
+  ) {
+    TextSelection newSelection = newValue.selection;
+    String truncated = newValue.text;
+
+    String value = newValue.text;
+
+    if (value.contains(".") &&
+        value.substring(value.indexOf(".") + 1).length > decimalRange) {
+      truncated = oldValue.text;
+      newSelection = oldValue.selection;
+    } else if (value == ".") {
+      truncated = "0.";
+
+      newSelection = newValue.selection.copyWith(
+        baseOffset: math.min(truncated.length, truncated.length + 1),
+        extentOffset: math.min(truncated.length, truncated.length + 1),
+      );
+    }
+
+    return TextEditingValue(
+      text: truncated,
+      selection: newSelection,
+      composing: TextRange.empty,
     );
   }
 }
